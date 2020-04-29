@@ -128,8 +128,10 @@ Theorem skip_right : forall c,
     (c ;; SKIP)
     c.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros c st st' . split; intros H.
+  - inversion H. subst. inversion H5. subst. assumption.
+  - apply E_Seq with st'. assumption. apply E_Skip.
+Qed.
 
 (** Similarly, here is a simple transformation that optimizes [TEST]
     commands: *)
@@ -216,8 +218,21 @@ Theorem TEST_false : forall b c1 c2,
     (TEST b THEN c1 ELSE c2 FI)
     c2.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros .
+  split.
+  intros.
+  inversion H0.
+  unfold bequiv in H.
+  rewrite H in H6.
+  inversion H6.
+  assumption.
+  intros.
+  apply E_IfFalse.
+  unfold bequiv in H.
+  rewrite H.
+  simpl. reflexivity.
+  assumption.
+Qed.
 
 (** **** Exercise: 3 stars, standard (swap_if_branches)  
 
@@ -229,8 +244,27 @@ Theorem swap_if_branches : forall b e1 e2,
     (TEST b THEN e1 ELSE e2 FI)
     (TEST BNot b THEN e2 ELSE e1 FI).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+   intros. split.
+  intros.
+  inversion H. subst.
+  assert (beval st (BNot b) = false).
+  simpl.
+  rewrite H5. reflexivity.
+  apply E_IfFalse.
+  assumption.
+  assumption.
+  apply E_IfTrue.
+  simpl.
+  rewrite H5. reflexivity. assumption.
+  intros.
+  inversion H.
+  apply E_IfFalse. inversion H5. simpl in H8.
+  assert(negb (negb (beval st b)) = false).
+  rewrite H8. simpl. reflexivity.
+  rewrite negb_involutive in H7. assumption. assumption.
+  simpl in H5. rewrite negb_false_iff in H5.
+  apply E_IfTrue. assumption. assumption.
+Qed.
 
 (** For [WHILE] loops, we can give a similar pair of theorems.  A loop
     whose guard is equivalent to [BFalse] is equivalent to [SKIP],
@@ -367,8 +401,28 @@ Proof.
 Theorem seq_assoc : forall c1 c2 c3,
   cequiv ((c1;;c2);;c3) (c1;;(c2;;c3)).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+    intros.
+   split.
+   intros H.
+   inversion H.
+   subst.
+   inversion H2.
+   subst.
+   apply E_Seq with st'1.
+   assumption.
+   apply E_Seq with st'0.
+   assumption.
+   apply H5.
+   intros H.
+   inversion H.
+   inversion H5.
+   subst.
+   apply E_Seq with st'1.
+   apply E_Seq with st'0.
+   assumption. 
+   assumption.
+   assumption.
+Qed.
 
 (** Proving program properties involving assignments is one place
     where the fact that program states are treated
@@ -397,8 +451,13 @@ Theorem assign_aequiv : forall (x : string) e,
   aequiv x e ->
   cequiv SKIP (x ::= e).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+   intros x e EQ.
+  eapply ceval_trans.
+  - apply ceval_sym.
+    apply identity_assignment.
+  - apply assign_aequivs.
+    assumption.
+Qed.
 
 (** **** Exercise: 2 stars, standard (equiv_classes)  *)
 
@@ -671,8 +730,48 @@ Theorem CIf_congruence : forall b b' c1 c1' c2 c2',
   cequiv (TEST b THEN c1 ELSE c2 FI)
          (TEST b' THEN c1' ELSE c2' FI).
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  intros b b' c1 c1' c2 c2'.
+intros H1 H2 H3.
+split.
+ intros H4.
+ inversion H4.
+  subst.
+  apply E_IfTrue.
+   unfold bequiv in H1.
+   rewrite <- H8.
+   rewrite H1.
+   reflexivity.
+   
+   apply H2.
+   assumption.
+   
+  subst.
+  apply E_IfFalse.
+   rewrite <- H8.
+   rewrite H1.
+   reflexivity.
+   
+   apply H3.
+   assumption.
+   
+ intros H4.
+ inversion H4; subst.
+  apply E_IfTrue.
+   rewrite <- H8.
+   rewrite H1.
+   reflexivity.
+   
+   apply H2.
+   assumption.
+   
+  apply E_IfFalse.
+   rewrite <- H8.
+   rewrite H1.
+   reflexivity.
+   
+   apply H3.
+   assumption.
+Qed.
 
 (** For example, here are two equivalent programs and a proof of their
     equivalence... *)
