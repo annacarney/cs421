@@ -536,8 +536,25 @@ Theorem hoare_asgn_fwd :
   {{fun st => P (X !-> m ; st)
            /\ st X = aeval (X !-> m ; st) a }}.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+ intros.
+  unfold hoare_triple.
+  intros.
+  split.
+  inversion H.
+  rewrite t_update_shadow.
+  destruct H0.
+  rewrite <- H6.
+  rewrite t_update_same.
+  subst.
+  exact H0.
+  inversion H.
+  rewrite t_update_shadow.
+  destruct H0.
+  rewrite <- H6.
+  rewrite t_update_same.
+  rewrite t_update_eq.
+  subst. reflexivity.
+Qed.
 
 (** **** Exercise: 2 stars, advanced, optional (hoare_asgn_fwd_exists)  
 
@@ -914,14 +931,32 @@ Qed.
 
    (Note the use of "[->>]" decorations, each marking a use of
    [hoare_consequence_pre].) *)
+   
+   Theorem hoare_seq : forall P Q R c1 c2,
+     {{Q}} c2 {{R}} ->
+     {{P}} c1 {{Q}} ->
+     {{P}} c1;;c2 {{R}}.
+Proof.
+  intros P Q R c1 c2 H1 H2 st st' H12 Pre.
+  inversion H12; subst.
+  apply (H1 st'0 st'); try assumption.
+  apply (H2 st st'0); assumption. Qed.
 
 Example hoare_asgn_example4 :
   {{fun st => True}}
   X ::= 1;; Y ::= 2
   {{fun st => st X = 1 /\ st Y = 2}}.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+   eapply hoare_seq.
+  - (* Y <= 2 *)
+    apply hoare_asgn.
+  - (* X <= 1 *)
+    eapply hoare_consequence_pre.
+    + eapply hoare_asgn.
+    + intros st H. split.
+      * simpl. unfold t_update. subst. reflexivity.
+      * simpl. apply t_update_eq.
+Qed.
 
 (** **** Exercise: 3 stars, standard (swap_exercise)  
 
@@ -944,8 +979,14 @@ Theorem swap_exercise :
   swap_program
   {{fun st => st Y <= st X}}.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+  eapply hoare_seq.
+  eapply hoare_seq.
+  apply hoare_asgn.
+  apply hoare_asgn.
+ eapply hoare_consequence_pre.
+    apply hoare_asgn.
+    intros st H. unfold assn_sub, update. simpl. assumption. 
+ Qed.
 
 (** **** Exercise: 3 stars, standard (hoarestate1)  
 
@@ -1094,8 +1135,14 @@ Theorem if_minus_plus :
   FI
   {{fun st => st Y = st X + st Z}}.
 Proof.
-  (* FILL IN HERE *) Admitted.
-(** [] *)
+ apply hoare_if.
+  - eapply hoare_consequence_pre. apply hoare_asgn.
+    unfold bassn, assn_sub, t_update, assert_implies.
+    simpl. intros st [_ H]. apply leb_complete in H. inversion H; omega.
+  - eapply hoare_consequence_pre. apply hoare_asgn.
+    unfold bassn, assn_sub, t_update, assert_implies.
+    simpl. intros st [_ H]. reflexivity.
+Qed.
 
 (* ----------------------------------------------------------------- *)
 (** *** Exercise: One-sided conditionals *)
